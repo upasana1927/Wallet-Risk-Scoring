@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Risk Scores CSV Viewer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .file-input-section {
+            padding: 30px;
+            text-align: center;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .file-input {
+            padding: 12px 20px;
+            border: 2px dashed #667eea;
+            border-radius: 10px;
+            background: white;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .file-input:hover {
+            border-color: #764ba2;
+            background: #f8f9fa;
+        }
+
+        .table-container {
+            padding: 30px;
+            overflow-x: auto;
+            min-height: 200px;
+        }
+
+        .risk-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .risk-table th {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 20px;
+            text-align: left;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 0.9rem;
+        }
+
+        .risk-table td {
+            padding: 18px 20px;
+            border-bottom: 1px solid #e9ecef;
+            transition: background-color 0.3s ease;
+        }
+
+        .risk-table tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        .risk-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .wallet-address {
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            color: #495057;
+            background: #f8f9fa;
+            padding: 8px 12px;
+            border-radius: 8px;
+            word-break: break-all;
+        }
+
+        .risk-score {
+            font-weight: bold;
+            font-size: 1.1rem;
+            color: #495057;
+            padding: 8px 16px;
+            background: #e3f2fd;
+            border-radius: 8px;
+            text-align: center;
+            display: inline-block;
+            min-width: 60px;
+        }
+
+        .search-box {
+            margin-bottom: 20px;
+            padding: 12px 20px;
+            border: 2px solid #e9ecef;
+            border-radius: 25px;
+            font-size: 1rem;
+            width: 300px;
+            transition: border-color 0.3s ease;
+        }
+
+        .search-box:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .status {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+            font-size: 1.1rem;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+            padding: 20px 30px;
+            background: #f8f9fa;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .stat-number {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            color: #6c757d;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+
+        @media (max-width: 768px) {
+            .search-box {
+                width: 100%;
+            }
+            
+            .risk-table th,
+            .risk-table td {
+                padding: 12px 8px;
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔒 Risk Scores Viewer</h1>
+            <p>Upload and view CSV files in table format</p>
+        </div>
+
+        <div class="file-input-section">
+            <input type="file" id="csvFile" accept=".csv" class="file-input" />
+            <p style="margin-top: 10px; color: #6c757d;">Select your risk_scores.csv file</p>
+        </div>
+
+        <div id="statsSection" class="stats" style="display: none;">
+            <div class="stat-card">
+                <div class="stat-number" id="totalWallets">0</div>
+                <div class="stat-label">Total Wallets</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="avgScore">0</div>
+                <div class="stat-label">Average Score</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="maxScore">0</div>
+                <div class="stat-label">Max Score</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="minScore">0</div>
+                <div class="stat-label">Min Score</div>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <div id="searchSection" style="display: none;">
+                <input type="text" class="search-box" placeholder="🔍 Search wallets..." id="searchBox" />
+            </div>
+            
+            <div id="status" class="status">
+                📁 Please select a CSV file to display the data
+            </div>
+            
+            <table id="riskTable" class="risk-table" style="display: none;">
+                <thead id="tableHeader"></thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('csvFile').addEventListener('change', handleFile);
+        document.getElementById('searchBox').addEventListener('input', filterTable);
+
+        function handleFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
+                document.getElementById('status').innerHTML = '❌ Please select a valid CSV file';
+                return;
+            }
+
+            document.getElementById('status').innerHTML = '📊 Loading CSV data...';
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const csv = e.target.result;
+                    const data = parseCSV(csv);
+                    
+                    if (data.length === 0) {
+                        document.getElementById('status').innerHTML = '❌ CSV file appears to be empty';
+                        return;
+                    }
+
+                    displayTable(data);
+                    updateStats(data);
+                    
+                } catch (error) {
+                    document.getElementById('status').innerHTML = `❌ Error reading CSV: ${error.message}`;
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function parseCSV(csv) {
+            const lines = csv.trim().split('\n');
+            if (lines.length < 2) return [];
+
+            const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+            const data = [];
+
+            for (let i = 1; i < lines.length; i++) {
+                const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
+                if (values.length === headers.length) {
+                    const row = {};
+                    headers.forEach((header, index) => {
+                        row[header] = values[index];
+                    });
+                    data.push(row);
+                }
+            }
+
+            return data;
+        }
+
+        function displayTable(data) {
+            const table = document.getElementById('riskTable');
+            const thead = document.getElementById('tableHeader');
+            const tbody = document.getElementById('tableBody');
+            const status = document.getElementById('status');
+
+            // Clear existing content
+            thead.innerHTML = '';
+            tbody.innerHTML = '';
+
+            if (data.length === 0) {
+                status.innerHTML = '❌ No data found in CSV';
+                return;
+            }
+
+            // Create header
+            const headers = Object.keys(data[0]);
+            const headerRow = document.createElement('tr');
+            headers.forEach(header => {
+                const th = document.createElement('th');
+                th.textContent = header.charAt(0).toUpperCase() + header.slice(1).replace('_', ' ');
+                headerRow.appendChild(th);
+            });
+            thead.appendChild(headerRow);
+
+            // Create rows
+            data.forEach(row => {
+                const tr = document.createElement('tr');
+                headers.forEach(header => {
+                    const td = document.createElement('td');
+                    
+                    if (header.toLowerCase().includes('wallet') || header.toLowerCase().includes('address')) {
+                        td.innerHTML = `<div class="wallet-address">${row[header]}</div>`;
+                    } else if (header.toLowerCase().includes('score')) {
+                        td.innerHTML = `<span class="risk-score">${row[header]}</span>`;
+                    } else {
+                        td.textContent = row[header];
+                    }
+                    
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+            });
+
+            // Show table and hide status
+            table.style.display = 'table';
+            status.style.display = 'none';
+            document.getElementById('searchSection').style.display = 'block';
+            document.getElementById('statsSection').style.display = 'grid';
+        }
+
+        function updateStats(data) {
+            const totalWallets = data.length;
+            let scores = [];
+            
+            // Find score column
+            const scoreKey = Object.keys(data[0]).find(key => 
+                key.toLowerCase().includes('score')
+            );
+            
+            if (scoreKey) {
+                scores = data.map(row => parseFloat(row[scoreKey]) || 0);
+            }
+
+            document.getElementById('totalWallets').textContent = totalWallets;
+            
+            if (scores.length > 0) {
+                const avgScore = (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1);
+                const maxScore = Math.max(...scores);
+                const minScore = Math.min(...scores);
+                
+                document.getElementById('avgScore').textContent = avgScore;
+                document.getElementById('maxScore').textContent = maxScore;
+                document.getElementById('minScore').textContent = minScore;
+            }
+        }
+
+        function filterTable() {
+            const searchTerm = document.getElementById('searchBox').value.toLowerCase();
+            const rows = document.querySelectorAll('#tableBody tr');
+            
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(searchTerm) ? '' : 'none';
+            });
+        }
+
+        // Drag and drop functionality
+        const container = document.querySelector('.container');
+        
+        container.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            container.style.opacity = '0.8';
+        });
+        
+        container.addEventListener('dragleave', () => {
+            container.style.opacity = '1';
+        });
+        
+        container.addEventListener('drop', (e) => {
+            e.preventDefault();
+            container.style.opacity = '1';
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                document.getElementById('csvFile').files = files;
+                handleFile({ target: { files: files } });
+            }
+        });
+    </script>
+</body>
+</html>
